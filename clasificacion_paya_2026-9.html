@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLASIFICACIÓN PAYA 2026</title>
+<style>
+:root{color-scheme:dark;--bg:#090d18;--panel:#121b2b;--line:#293750;--gold:#facc15;--muted:#9aa9c0}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#1b2c48 0,#090d18 58%);color:#f8fafc;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;min-height:100vh;padding:20px}
+.wrap{max-width:820px;margin:auto}
+header{text-align:center;padding:24px 12px 18px}
+.trophy{font-size:38px}
+h1{font-size:clamp(25px,5vw,42px);letter-spacing:1.5px;margin:6px 0;color:white}
+h2{color:var(--gold);font-size:clamp(23px,4vw,34px);margin:0 0 8px;letter-spacing:2px}
+.sub{color:var(--muted);font-size:12px;letter-spacing:2px}
+.panel{background:rgba(18,27,43,.96);border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0;box-shadow:0 12px 35px #0003}
+.champion{background:linear-gradient(110deg,#352e19,#182337);border:1px solid #8e742b;padding:18px;border-radius:14px;text-align:center}
+.champion small{color:#f6d96b;letter-spacing:1px}
+.champion-name{font-size:25px;font-weight:800;margin:7px 0}
+.champion-points{font-size:24px;font-weight:900;color:var(--gold)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+button,select,input{font:inherit}
+button{border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:#223149;color:#fff;font-weight:700;cursor:pointer}
+button:hover{filter:brightness(1.15)}
+button:active{transform:scale(.98)}
+.primary{background:var(--gold);color:#171717;border-color:var(--gold)}
+.danger{background:#45202b;border-color:#713344}
+select,input{background:#0c1422;border:1px solid #35445d;color:#fff;border-radius:10px;padding:10px;min-width:0}
+input{flex:1}
+label{color:#c3cede;font-size:14px}
+.player{display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;background:#151f30;border:1px solid #293750;border-radius:13px;margin:9px 0}
+.rank{width:44px;height:44px;border-radius:12px;background:#29364a;display:grid;place-items:center;font-weight:900;font-size:17px}
+.player:nth-child(1) .rank{background:#eab308;color:#171717}
+.player:nth-child(2) .rank{background:#94a3b8;color:#111827}
+.player:nth-child(3) .rank{background:#b87345;color:#171717}
+.name{font-weight:750;overflow-wrap:anywhere}
+.points{color:var(--gold);font-size:19px;font-weight:900;margin-top:3px}
+.actions{display:flex;gap:6px}
+.actions button{min-width:48px;padding:9px 10px}
+.plus{background:#14532d;border-color:#267648}
+.minus{background:#4a202b;border-color:#7b3443}
+.empty{text-align:center;color:var(--muted);padding:20px}
+footer{text-align:center;color:#74839a;font-size:12px;padding:12px}
+@media(max-width:520px){body{padding:10px}.panel{padding:12px}.player{grid-template-columns:42px minmax(0,1fr);gap:10px}.rank{width:38px;height:38px}.actions{grid-column:2;justify-content:flex-start}.actions button{flex:1}.points{font-size:17px}.controls button{flex:1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="trophy">🏆</div>
+<h1>CLASIFICACIÓN</h1>
+<h2>PAYA 2026</h2>
+<div class="sub">LEADERBOARD · TEMPORADA 2026</div>
+</header>
+<section class="panel">
+<div class="champion">
+<small>👑 CAMPEÓN ACTUAL</small>
+<div class="champion-name" id="championName">—</div>
+<div class="champion-points" id="championPoints">0 Gitan' Credit</div>
+</div>
+<div class="controls">
+<label for="step">Cambiar puntos:</label>
+<select id="step"><option value="1">±1</option><option value="5">±5</option><option value="10" selected>±10</option><option value="25">±25</option><option value="100">±100</option></select>
+<button id="addBtn" class="primary">＋ Añadir persona</button>
+<button id="exportBtn">Exportar copia</button>
+<button id="resetBtn" class="danger">Reiniciar puntos</button>
+</div>
+<div id="ranking"></div>
+<footer>Los cambios se guardan automáticamente en este navegador.</footer>
+</section>
+<footer>CLASIFICACIÓN PAYA 2026 · PUNTOS: GITAN' CREDIT</footer>
+</div>
+<script>
+const initialNames = [
+"Erik","Noa Alonso","Noa Pérez","Dylan","Ángel","Rubén","Iván","Gonzalo","Kevin",
+"Daniel","Antonio","Allison","Joel","Diego","Raúl","Nacho","Denis","Irene",
+"David Prieto","David Pascual","Marcos","Samuel","Alejandro","Hugo","María","Dapne"
+];
+const storageKey = "clasificacion-paya-2026-v1";
+let people;
+try {
+  const saved = localStorage.getItem(storageKey);
+  people = saved ? JSON.parse(saved) : initialNames.map((name,i)=>({id:i+1,name,points:0}));
+  if (!Array.isArray(people)) throw new Error("bad data");
+} catch(e) {
+  people = initialNames.map((name,i)=>({id:i+1,name,points:0}));
+}
+let nextId = Math.max(0,...people.map(p=>Number(p.id)||0))+1;
+const rankingEl = document.getElementById("ranking");
+const stepEl = document.getElementById("step");
+function save(){try{localStorage.setItem(storageKey,JSON.stringify(people));}catch(e){}}
+function sorted(){return [...people].sort((a,b)=>b.points-a.points || a.name.localeCompare(b.name,"es"))}
+function change(id,delta){people=people.map(p=>p.id===id?{...p,points:(Number(p.points)||0)+delta}:p);save();render()}
+function render(){
+  const list=sorted();
+  document.getElementById("championName").textContent=list[0]?.name ?? "Sin jugadores";
+  document.getElementById("championPoints").textContent=(list[0]?.points ?? 0)+" Gitan' Credit";
+  rankingEl.innerHTML="";
+  if(!list.length){rankingEl.innerHTML='<div class="empty">No hay personas en la clasificación.</div>';return}
+  list.forEach((p,i)=>{
+    const row=document.createElement("div");row.className="player";
+    const rank=document.createElement("div");rank.className="rank";rank.textContent="#"+(i+1);
+    const info=document.createElement("div");
+    const name=document.createElement("div");name.className="name";name.textContent=p.name;
+    const pts=document.createElement("div");pts.className="points";pts.textContent=(Number(p.points)||0)+" Gitan' Credit";
+    info.append(name,pts);
+    const actions=document.createElement("div");actions.className="actions";
+    const minus=document.createElement("button");minus.className="minus";minus.textContent="− "+stepEl.value;minus.title="Restar puntos";minus.onclick=()=>change(p.id,-Number(stepEl.value));
+    const plus=document.createElement("button");plus.className="plus";plus.textContent="+ "+stepEl.value;plus.title="Sumar puntos";plus.onclick=()=>change(p.id,Number(stepEl.value));
+    actions.append(minus,plus);row.append(rank,info,actions);rankingEl.append(row);
+  });
+}
+stepEl.addEventListener("change",render);
+document.getElementById("addBtn").onclick=()=>{
+  const name=prompt("Nombre de la persona:");
+  if(name && name.trim()){
+    people.push({id:nextId++,name:name.trim(),points:0});save();render();
+  }
+};
+document.getElementById("resetBtn").onclick=()=>{
+  if(confirm("¿Seguro que quieres poner a cero los puntos de todos? Los nombres se conservarán.")){
+    people=people.map(p=>({...p,points:0}));save();render();
+  }
+};
+document.getElementById("exportBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify(people,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");
+  a.href=url;a.download="clasificacion-paya-2026-copia.json";a.click();URL.revokeObjectURL(url);
+};
+render();
+</script>
+</body>
+</html>
